@@ -1,0 +1,50 @@
+name: Random Commits Generator
+
+on:
+  schedule:
+    - cron: '0 7 * * *'    # Runs every day at 7 AM UTC
+  workflow_dispatch:       # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  random-commits:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "Imraanaziz"
+          git config --global user.email "imranaziz5531@gmail.com"
+
+      - name: Generate random number of commits
+        run: |
+          # Check if it's Sunday (0 = Sunday)
+          if [ $(date +%w) -eq 0 ]; then
+            # Sunday: 80% chance for 0, 15% for 1, 5% for 2
+            WEIGHTS=(0 0 0 0 0 0 0 0 1 1 1 2)
+          else
+            # Other days: 40% for 0, 30% for 2-3, 10% for 5-6
+            WEIGHTS=(0 0 1 1 2 2 2 3 3 5 6)
+          fi
+          COUNT=${WEIGHTS[$((RANDOM % ${#WEIGHTS[@]}))]}
+          echo "Will make $COUNT commit(s) today"
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No commits today!"
+            exit 0
+          fi
+
+          for i in $(seq 1 $COUNT); do
+            echo "Commit #$i at $(date -u) [UUID: $(uuidgen)]" >> update.txt
+            git add update.txt
+            git commit -m "Random commit #$i on $(date -u)"
+            sleep $((RANDOM % 10 + 1))  # Random delay for natural commits
+          done
+
+      - name: Push commits
+        run: git push origin main
